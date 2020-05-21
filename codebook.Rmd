@@ -1,0 +1,85 @@
+---
+title: "codebook"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Below is a list of variables used:
+
+## Variables used
+
+Xtest <- variable to store the read in x_test.txt file 
+XtestNames <- variable to store the read in features.txt file
+XtestNamesTranspose <- transposed 'XtestNames'
+XtestWithName <- a new data table by combining XtestNamesTranspose with Xtest
+ytest <- variable to store the read in y_test.txt file
+testdata <- a new data table by combining XtestWithName and ytest
+subjecttest <- variable to store the read in subject_test.txt file
+testdatacomplete <- a new data table by combining 'testdata' and 'subjecttest'
+
+Xtrain <- variable to store the read in x_train.txt file
+XtrainWithName <- a new data table by combining Xtrain and XtestNamesTranspose
+ytrain <- variable to store the read in y_train.txt file
+traindata <- new data table, combined 'XtrainWithName' and 'ytrain'
+subjecttrain <- variable to store read in subject_train.txt file
+traindatacomplete <- a new data table, combined 'traindata' and 'subjecttrain' 
+
+fulldataset <- combined 'traindatacomplete' and 'testdatacomplete' into a new data.table
+fulldatasetcomplete <- added activity description column
+
+## The data files used
+
+X_test.txt
+y_test.txt
+subject_test.txt
+X_train.txt
+y_train.txt
+features.txt
+
+## Transformations used to clean up data
+Transposed the features.txt so can add as column name
+```{r}
+XtestNames <- read.table("./UCI HAR Dataset/features.txt")
+XtestNames <- as.data.table(XtestNames) ##make it a data.table, then can use dcast and melt to transpose it below. Otherwise there's some warning message if try to transpose a data.frame
+XtestNamesTranspose <- dcast(melt(XtestNames, id.vars = "V1"), variable ~ V1) ##transpose XtestNames data.table
+XtestNamesTranspose$variable <- NULL ## remove first column, it's non relevant data 
+XtestWithName <- rbind(XtestNamesTranspose, Xtest, use.names = FALSE) ## combine by row the name and the test data
+```
+
+Used cbind and rbind to combine data, below is a cbind example
+```{r}
+testdatacomplete <- cbind(subjecttest, testdata)
+
+```
+
+Used ifelse() to create a list for the activity descriptions
+```{r}
+## Use ifelse() to create a vector with the proper descriptive activity
+activitydescriptions <- ifelse(fulldataset$activity == 1, "WALKING", ifelse(
+        fulldataset$activity == 2, "WALKING_UPSTAIRS", ifelse(
+                fulldataset$activity == 3, "WALKING_DOWNSTAIRS", ifelse(
+                        fulldataset$activity == 4, "SITTING", ifelse(
+                                fulldataset$activity == 5, "STANDING", "LAYING"
+                        )
+                )
+        )
+))
+```
+
+Used lapply to convert the data.table columns into numeric so could calculate the mean
+```{r}
+convertfulldatasetcomplete <- lapply(fulldatasetcomplete, function(x) as.numeric(as.character(x))) ##make the columns numeric while retaining header
+t <- as.data.table(convertfulldatasetcomplete) ##convert it into a data.table, the lapply returned a list
+activitysubjectdata <- aggregate(.~ activity + subject, t, mean, na.action = na.pass) ##there are NA's, then it will throw no rows error...
+
+```
+
+
+
+
+
